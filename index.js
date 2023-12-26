@@ -1,11 +1,19 @@
 const { config } = require("dotenv");
-const { Client, GatewayIntentBits, Collection } = require("discord.js");
+const {
+  Client,
+  GatewayIntentBits,
+  Collection,
+  FLagfs,
+  ActionRowBuilder,
+} = require("discord.js");
 const fs = require("fs");
 const path = require("path");
 
 config();
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
+});
 client.commands = new Collection();
 
 const eventsPath = path.join(__dirname, "events");
