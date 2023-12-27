@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const axios = require("axios");
 const slugify = require("slugify");
+const getErrorEmbed = require("../helpers/get-error-embed");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -85,19 +86,15 @@ module.exports = {
 
       await interaction.reply({
         embeds: [embed],
-        ephemeral: true,
       });
     } catch (error) {
       console.log(`HATA ${error}`);
 
-      const embed = new EmbedBuilder()
-        .setColor(0xf20628)
-        .setTitle("HATA")
-        .setDescription(
-          "Lütfen önerilen surelerden seçin ya da geçerli bir ayet numarası girin."
-        )
-        .setTimestamp();
-      await interaction.reply({ embeds: [embed], ephemeral: true });
+      const embed = getErrorEmbed(
+        "",
+        "Lütfen önerilen surelerden seçin ya da geçerli bir ayet numarası girin."
+      );
+      await interaction.reply({ embeds: [embed] });
     }
   },
 };

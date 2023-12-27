@@ -4,8 +4,9 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "start": "nodemon index",
-    "debugger": "ndb index.js"
+    "start": "node index",
+    "debugger": "ndb index.js",
+    "dev": "nodemon index.js"
   },
   "dependencies": {
     "@discordjs/voice": "^0.16.1",

@@ -27,5 +27,13 @@ module.exports = {
         console.log(`Hata auto ${error}`);
       }
     }
+
+    if (interaction.isButton()) {
+      try {
+        await command.button(interaction);
+      } catch (error) {
+        console.log(`Hata button ${error}`);
+      }
+    }
   },
 };

@@ -1,12 +1,16 @@
 const {
   SlashCommandBuilder,
-  EmbedBuilder,
-  ButtonBuilder,
-  ButtonStyle,
+
   ActionRowBuilder,
+  EmbedBuilder,
+  ButtonInteraction,
+  CommandInteraction,
 } = require("discord.js");
 const axios = require("axios");
 const slugify = require("slugify");
+const getListenButtons = require("../helpers/get-listen-buttons");
+const getErrorEmbed = require("../helpers/get-error-embed");
+const { getVoiceConnection } = require("@discordjs/voice");
 
 const AudioPlayer = require("../helpers/AudioPlayer");
 
@@ -22,7 +26,7 @@ module.exports = {
         .setAutocomplete(true)
     ),
 
-  autocomplete: async (interaction) => {
+  autocomplete: async function (interaction) {
     const focusedOption = interaction.options.getFocused(true);
     const surahStr = slugify(focusedOption.value, { lower: true });
     let options;
@@ -43,57 +47,68 @@ module.exports = {
     );
   },
 
-  execute: async (interaction) => {
+  /**
+   * @param {ButtonInteraction} interaction
+   */
+  button: async function (interaction) {
+    const connection = getVoiceConnection(interaction.guildId);
+    if (interaction.customId === "kick") {
+      connection.destroy();
+      return await interaction.update({
+        content: "Dinleme durduruldu",
+        components: [],
+      });
+    }
+  },
+  /**
+   * @param {CommandInteraction} interaction
+   */
+  execute: async function (interaction) {
     try {
+      if (!interaction.member.voice.channelId)
+        return await interaction.reply("Lütfen bir sesli kanala katılın.");
+
       const surah = +interaction.options.getString("sure");
 
       const { data } = await axios.get(
         `https://api.acikkuran.com/surah/${surah}`
       );
 
-      const { player, connection } = new AudioPlayer(interaction, data);
+      new AudioPlayer(interaction, data);
 
-      const stop = new ButtonBuilder()
-        .setCustomId("stop")
-        .setLabel("Durdur")
-        .setStyle(ButtonStyle.Danger);
-      const play = new ButtonBuilder()
-        .setCustomId("play")
-        .setLabel("Oynat")
-        .setStyle(ButtonStyle.Success);
+      const { kick } = getListenButtons();
 
-      const kick = new ButtonBuilder()
-        .setCustomId("kick")
-        .setLabel("Bağlantıyı kes")
-        .setStyle(ButtonStyle.Secondary);
-
-      const row = new ActionRowBuilder().addComponents(stop, play, kick);
-
-      interaction.client.on(
-        "interactionCreate",
-        async function (buttonInteraction) {
-          if (!buttonInteraction.isButton()) return;
-
-          if (buttonInteraction.customId === "stop") {
-            player.pause();
-            await buttonInteraction.update("Ayet dinleme durduruldu");
-          } else if (buttonInteraction.customId === "play") {
-            player.unpause();
-            await buttonInteraction.update("Ayet dinleniyor");
-          } else if (buttonInteraction.customId === "kick") {
-            connection.destroy();
-            await buttonInteraction.update("Bot bağlantısı kesildi");
+      const row = new ActionRowBuilder().addComponents(kick);
+      const embed = new EmbedBuilder()
+        .setColor(0x0099ff)
+        .setTitle(`${data.data.id}.${data.data.name} Suresi`)
+        .addFields(
+          {
+            name: "Ayet Sayısı",
+            value: `${data.data.verse_count}`,
+          },
+          {
+            name: "Sayfa Numarası",
+            value: `${data.data.pageNumber}`,
           }
-        }
-      );
+        )
+        .setURL(`https://acikkuran.com/${data.data.id}`)
+        .setAuthor({
+          name: "Açık Kuran",
+          iconURL: "https://acikkuran.com/images/icons/apple-icon-57x57.png",
+          url: "https://acikkuran.com",
+        });
 
       return await interaction.reply({
         content: "Ayet dinleniyor",
         components: [row],
+        embeds: [embed],
       });
     } catch (error) {
-      console.log(error);
-      await interaction.reply("Dinleme özelliği şu anda aktif değildir.");
+      const embed = getErrorEmbed("HATA!", "Bir şeyler ters gitti.");
+      await interaction.reply({
+        embeds: [embed],
+      });
     }
   },
 };
